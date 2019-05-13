@@ -9,8 +9,8 @@
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.16.4",
+    "mongodb": "^3.2.4",
     "mongodb-topology-manager": "^2.1.0",
-    "mongoose": "^5.5.5",
     "socket.io": "^2.2.0",
     "socket.io-adapter-mongo": "^2.0.3"
   },

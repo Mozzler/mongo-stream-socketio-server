@@ -7,7 +7,6 @@ router
   .get(userService.getAllUsers)
   .post(userService.createNewUser);
   
-
 router
   .route('/:id')
   .put(userService.editUser)

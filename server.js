@@ -1,10 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const redis = require('redis');
-//const redisAdapter = require('socket.io-redis');
 const mongoAdapter = require('socket.io-adapter-mongo');
 const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
+const db = require('./services/db');
 const { ReplSet } = require('mongodb-topology-manager');
 const config = require('./config/config');
 const userRoutes = require('./routes/user');
@@ -17,13 +15,8 @@ runServer().catch(error => console.error(error));
 
 async function runServer() {
   await setupReplicaSet();
-
-  mongoose
-    .connect(config.MONGO_URI, {useNewUrlParser: true}) 
-    .then(() => console.log('DB Connected'))
-    .catch(err => console.log(err));
-
-  //io.adapter(redisAdapter({host: config.HOST, port: config.REDIS_PORT}));
+  await db.connect(config.MONGO_URI, config.DB_NAME);
+ 
   io.adapter(mongoAdapter(config.MONGO_URI));
 
   app.use(cors());
