@@ -23,8 +23,9 @@ class MongoSocketsService {
   addMongoListener(socket, data) {
     const collection = models[data.model];
     const filter = data.filter;
+    const model = db.get().collection(collection);
 
-    this.sockets[socket.id] = db.get().collection(collection).watch(filter).on('change', data => {
+    this.sockets[socket.id] = model.watch(filter, {fullDocument: 'updateLookup'}).on('change', data => {
       const {
         operationType,
         updateDescription,
