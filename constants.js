@@ -1,7 +1,7 @@
 module.exports = {
   models: {
-    User: 'users',
-    Car: 'cars',
-    Dealership: 'dealerships' 
+    User: 'mozzler.auth.user',
+    Car: 'drivible.car',
+    Dealership: 'drivible.dealership' 
   }
 };

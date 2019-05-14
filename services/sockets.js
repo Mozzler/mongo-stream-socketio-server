@@ -1,26 +1,46 @@
 const db = require('./db');
-const nanoid = require('nanoid/generate');
+const API = require('./web-api');
 const { models } = require('../constants');
+const nanoid = require('nanoid/generate');
 const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
 
 class MongoSocketsService {
   constructor(io) {
     this.io = io;
-    this.streams = {};
+    //this.streams = {};
+    this.sockets = {};
 
     this.io.on('connection', (socket) => {
       console.log(`NEW SOCKET ${socket.id}`);
 
       socket.on('join_collection', async (data, cb) => {
-        const records = await db.get().collection(models[data.model]).find().toArray();
-                
-        let streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
-        this.addMongoListener(socket, data, streamId);
+        let user = await API.checkToken(data.token); //move it to sockets connection!!!!
 
-        cb({
-          streamId,
-          records
-        });
+        if (user) {
+          if (!this.sockets[socket.id]) {
+            this.sockets[socket.id] = {
+              token: data.token,
+              streams: {}
+            };
+          } else {
+            this.sockets[socket.id].token = data.token;
+          }
+
+          console.log('USER', user)
+
+          console.log(data.model)
+          const records = await db.get().collection(models[data.model]).find().toArray();
+                  
+          let streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
+          this.addMongoListener(socket, data, streamId);
+
+          cb({
+            streamId,
+            records
+          });
+        } else {
+          console.log('Some troubles with token!')
+        }
       });
 
       socket.on('disconnect', () => {
