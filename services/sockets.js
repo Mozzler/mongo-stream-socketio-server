@@ -1,4 +1,5 @@
 const db = require('./db');
+const ObjectID = require('mongodb').ObjectID;
 const API = require('./web-api');
 const { models } = require('../constants');
 const nanoid = require('nanoid/generate');
@@ -7,37 +8,19 @@ const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890
 class MongoSocketsService {
   constructor(io) {
     this.io = io;
-    //this.streams = {};
     this.sockets = {};
 
     this.io.on('connection', (socket) => {
       console.log(`NEW SOCKET ${socket.id}`);
 
       socket.on('join_collection', async (data, cb) => {
-        let user = await API.checkToken(data.token); //move it to sockets connection!!!!
+        const user = await API.checkToken(data.token);
 
         if (user) {
-          if (!this.sockets[socket.id]) {
-            this.sockets[socket.id] = {
-              token: data.token,
-              streams: {}
-            };
-          } else {
-            this.sockets[socket.id].token = data.token;
-          }
+          const streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
+          this.handleConnection(socket, data, streamId);
 
-          console.log('USER', user)
-
-          console.log(data.model)
-          const records = await db.get().collection(models[data.model]).find().toArray();
-                  
-          let streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
-          this.addMongoListener(socket, data, streamId);
-
-          cb({
-            streamId,
-            records
-          });
+          cb(streamId);
         } else {
           console.log('Some troubles with token!')
         }
@@ -45,30 +28,60 @@ class MongoSocketsService {
 
       socket.on('disconnect', () => {
         console.log(`DISCONNECTED SOCKET ${socket.id}`);
-        
-        Object.keys(this.streams).forEach(stream_id => {
-          if (stream_id.indexOf(socket.id) >= 0) {
-            this.streams[stream_id].close();
-            delete this.streams[stream_id];
-          }
-        });
+        if (this.sockets[socket.id] && this.sockets[socket.id].streams) {
+          Object.keys(this.sockets[socket.id].streams).forEach(stream_id => {
+            this.sockets[socket.id].streams[stream_id].close();
+            delete this.sockets[socket.id].streams[stream_id];
+          });
+        }
       });
 
-      socket.on('left_collection', (data) => {
-        console.log(`DISCONNECTED STREAM ${data.streamId}`);
-        
-        this.streams[data.streamId].close();
-        delete this.streams[data.streamId];
+      socket.on('left_collection', (streamId) => {
+        console.log(`DISCONNECTED STREAM ${streamId}`);
+        if (this.sockets[socket.id].streams && this.sockets[socket.id].streams[streamId]) {
+          this.sockets[socket.id].streams[streamId].close();
+          delete this.sockets[socket.id].streams[streamId];
+        }
       });
     });
   }
 
+  handleConnection(socket, data, streamId) {
+    if (!this.sockets[socket.id]) {
+      this.sockets[socket.id] = {
+        token: data.token,
+        streams: {}
+      };
+    } else {
+      this.sockets[socket.id].token = data.token;
+    }
+    
+    this.addMongoListener(socket, data, streamId);
+  }
+
+  getNewAccessToken() {
+    //emit event to receive new access token!!!!
+  }
+
   addMongoListener(socket, data, streamId) {
     const collection = models[data.model];
+    const mongoCollection = db.get().collection(collection);
     const filter = data.filter;
-    const model = db.get().collection(collection);
 
-    this.streams[streamId] = model.watch(filter, {fullDocument: 'updateLookup'}).on('change', data => {
+    //refactor it to support automatic convertation of ids to ObjectIDs
+    if (filter[0] && filter[0].$match && filter[0].$match.$or) {
+      filter[0].$match.$or.forEach(item => {
+        if (item['fullDocument._id']) {
+          item['fullDocument._id'] = ObjectID(item['fullDocument._id']);
+        }
+      });
+    }
+
+    console.log(`NEW STREAM ${streamId}`);
+    this.sockets[socket.id].streams[streamId] = mongoCollection.watch(
+      filter,
+      {fullDocument: 'updateLookup'}
+    ).on('change', data => {
       const {
         operationType,
         updateDescription,
