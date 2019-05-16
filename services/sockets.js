@@ -13,10 +13,13 @@ class MongoSocketsService {
     this.io.on('connection', (socket) => {
       console.log(`NEW SOCKET ${socket.id}`);
 
-      socket.emit('refresh_token', 'LALALA');
-
       socket.on('join_collection', async (data, cb) => {
         const user = await API.checkToken(data.token);
+        const permissionFilter = await API.getPermissionsFilter(data.token, data.model);
+
+        if (permissionFilter) {
+          //data.filter[0].$match.$and.push(permissionFilter);
+        }
 
         if (user) {
           const streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
@@ -46,7 +49,9 @@ class MongoSocketsService {
 
       socket.on('left_collection', (streamId) => {
         console.log(`DISCONNECTED STREAM ${streamId}`);
-        if (this.sockets[socket.id].streams && this.sockets[socket.id].streams[streamId]) {
+        if (this.sockets[socket.id] &&
+            this.sockets[socket.id].streams &&
+            this.sockets[socket.id].streams[streamId]) {
           this.sockets[socket.id].streams[streamId].close();
           delete this.sockets[socket.id].streams[streamId];
         }
@@ -72,14 +77,7 @@ class MongoSocketsService {
     const mongoCollection = db.get().collection(collection);
     const filter = data.filter;
 
-    //refactor it to support automatic convertation of ids to ObjectIDs
-    if (filter[0] && filter[0].$match && filter[0].$match.$or) {
-      filter[0].$match.$or.forEach(item => {
-        if (item['fullDocument._id']) {
-          item['fullDocument._id'] = ObjectID(item['fullDocument._id']);
-        }
-      });
-    }
+    this.castFilter(filter);
 
     console.log(`NEW STREAM ${streamId}`);
     this.sockets[socket.id].streams[streamId] = mongoCollection.watch(
@@ -95,6 +93,23 @@ class MongoSocketsService {
 
       socket.emit('mongo_data', {operationType, fullDocument, updateDescription, documentKey});
     });
+  }
+
+  castFilter(filter) {
+    const iterate = (obj) => {
+      Object.keys(obj).forEach(key => {
+        console.log(`KEY: ${key} - VALUE: ${obj[key]}`);
+
+        if (typeof obj[key] != 'number' && ObjectID.isValid(obj[key])) {
+          obj[key] = ObjectID(obj[key]);
+        }
+  
+        if (typeof obj[key] === 'object' && !(obj[key] instanceof ObjectID)) {
+          iterate(obj[key])
+        }
+      });
+    };
+    iterate(filter);
   }
 };
 

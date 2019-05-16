@@ -1,5 +1,6 @@
-const axios = require('axios');
 const { WEB_API_URL } = require('../config/config');
+const { models, server_models } = require('../constants');
+const axios = require('axios');
 
 axios.defaults.baseURL = WEB_API_URL;
 
@@ -21,9 +22,18 @@ module.exports = {
       return null;
     }
   },
-  // list: async (model, token) => {
-  //   const response = await axios.get(`${model}`, getOptions(token));
-  //   console.log(response.data)
-  //   return response.data;
-  // }
+  getPermissionsFilter: async (token, model) => {
+    try {
+      const { data: {models: available_models} } = await axios.get('metadata/streams', getOptions(token));
+      const filter =  available_models[server_models[models[model]]].permissionFilter;
+      
+      if (!Array.isArray(filter) && Object.keys(filter).length > 0) {
+        return filter;
+      } else {
+        return null;
+      }
+    } catch(err) {
+      return null;
+    }
+  } 
 };

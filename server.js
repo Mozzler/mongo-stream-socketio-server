@@ -5,7 +5,9 @@ const bodyParser = require('body-parser');
 const db = require('./services/db');
 const { ReplSet } = require('mongodb-topology-manager');
 const config = require('./config/config');
+const carRoutes = require('./routes/car');
 const userRoutes = require('./routes/user');
+const dealershipRoutes = require('./routes/dealership');
 const MongoSocketsService = require('./services/sockets');
 
 const app = express();
@@ -26,7 +28,9 @@ async function runServer() {
     res.send('This is not the server you are looking for.');
   });
 
-  app.use('/api/users', userRoutes);
+  app.use('/v1/cars', carRoutes);
+  app.use('/v1/users', userRoutes);
+  app.use('/v1/dealerships', dealershipRoutes);
   app.listen(config.PORT, () => console.log(`App running at ${config.PORT}`));
 
   const mongoSocketsService = new MongoSocketsService(io);

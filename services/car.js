@@ -1,8 +1,8 @@
 const db = require('./db');
 const ObjectID = require('mongodb').ObjectID;
 
-class UsersService {
-  async getAllUsers(req, res) {
+class CarsService {
+  async getAllCars(req, res) {
     try {
       const pageOptions = {
         page: req.query['page'] || 1,
@@ -11,11 +11,12 @@ class UsersService {
 
       const skip = parseInt(pageOptions.limit * (pageOptions.page - 1));
       const limit = parseInt(pageOptions.limit);
-      const result = await db.get().collection('mozzler.auth.user').aggregate([
+      const result = await db.get().collection('drivible.car').aggregate([
         { "$group": {'_id': null , 'total': { '$sum' : 1 }, results: { $push: '$$ROOT' } } },
         { '$project': {'total': 1 , 'results': { '$slice' : ['$results', skip, limit] } } }
       ]).toArray();
       
+
       result[0].results.forEach(item => {
         item.id = item._id;
         delete item._id;
@@ -39,9 +40,9 @@ class UsersService {
     }
   }
 
-  async createNewUser(req, res) {
+  async createNewCar(req, res) {
     try {
-      const result = await db.get().collection('mozzler.auth.user').insertOne(req.body);
+      const result = await db.get().collection('drivible.car').insertOne(req.body);
       res.status(200).send(result.ops[0]);
     } catch (err) {
       res.status(500).json({
@@ -50,11 +51,11 @@ class UsersService {
     }
   }
 
-  async editUser(req, res) {
+  async editCar(req, res) {
     try {
       const {id} = req.params;
       const newUser = req.body;
-      const result = await db.get().collection('mozzler.auth.user').updateOne({_id: ObjectID(id)}, {$set: newUser});
+      const result = await db.get().collection('drivible.car').updateOne({_id: ObjectID(id)}, {$set: newUser});
       res.status(200).send(!!result.ok);
     } catch (err) {
       res.status(500).json({
@@ -63,10 +64,10 @@ class UsersService {
     }
   }
 
-  async deleteUser(req, res) {
+  async deleteCar(req, res) {
     try {
       const {id} = req.params;
-      const result = await db.get().collection('mozzler.auth.user').deleteOne({_id: ObjectID(id)});
+      const result = await db.get().collection('drivible.car').deleteOne({_id: ObjectID(id)});
       res.status(200).send(!!result.ok);
     } catch (err) {
       res.status(500).json({
@@ -76,4 +77,4 @@ class UsersService {
   }
 };
 
-module.exports = new UsersService;
+module.exports = new CarsService;
