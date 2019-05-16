@@ -96,6 +96,8 @@ class MongoSocketsService {
   }
 
   castFilter(filter) {
+    console.log(JSON.stringify(filter));
+
     const iterate = (obj) => {
       Object.keys(obj).forEach(key => {
         console.log(`KEY: ${key} - VALUE: ${obj[key]}`);
