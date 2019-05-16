@@ -13,6 +13,8 @@ class MongoSocketsService {
     this.io.on('connection', (socket) => {
       console.log(`NEW SOCKET ${socket.id}`);
 
+      socket.emit('refresh_token', 'LALALA');
+
       socket.on('join_collection', async (data, cb) => {
         const user = await API.checkToken(data.token);
 
@@ -20,9 +22,15 @@ class MongoSocketsService {
           const streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
           this.handleConnection(socket, data, streamId);
 
-          cb(streamId);
+          cb({
+            streamId,
+            error: false
+          });
         } else {
-          console.log('Some troubles with token!')
+          cb({
+            streamId: null,
+            error: true
+          });
         }
       });
 
@@ -57,10 +65,6 @@ class MongoSocketsService {
     }
     
     this.addMongoListener(socket, data, streamId);
-  }
-
-  getNewAccessToken() {
-    //emit event to receive new access token!!!!
   }
 
   addMongoListener(socket, data, streamId) {
