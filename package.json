@@ -10,6 +10,7 @@
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.16.4",
+    "lodash": "^4.17.11",
     "mongodb": "^3.2.4",
     "nanoid": "^2.0.1",
     "socket.io": "^2.2.0",

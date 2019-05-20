@@ -8,5 +8,6 @@ module.exports = {
     'mozzler.auth.user': 'mozzler\\auth\\models\\User',
     'drivible.car': 'app\\models\\Car',
     'drivible.dealership': 'app\\models\\Dealership' 
-  }
+  },
+  alphabet: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
 };

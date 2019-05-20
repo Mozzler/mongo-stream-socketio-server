@@ -22,18 +22,23 @@ module.exports = {
       return null;
     }
   },
-  getPermissionsFilter: async (token, model) => {
+  getPermissionsFilter: async (token, model, is_raw) => {
     try {
       const { data: {models: available_models} } = await axios.get('metadata/streams', getOptions(token));
-      const filter =  available_models[server_models[models[model]]].permissionFilter;
       
-      if (!Array.isArray(filter) && Object.keys(filter).length > 0) {
-        return filter;
+      if (is_raw) {
+        return available_models;
       } else {
-        return null;
+        const filter =  available_models[server_models[models[model]]].permissionFilter;
+        
+        if (!Array.isArray(filter) && Object.keys(filter).length > 0) {
+          return filter;
+        } else {
+          return null;
+        }
       }
     } catch(err) {
       return null;
     }
-  } 
+  }
 };
