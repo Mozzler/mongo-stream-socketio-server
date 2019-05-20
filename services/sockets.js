@@ -1,7 +1,7 @@
 const db = require('./db');
 const ObjectID = require('mongodb').ObjectID;
 const API = require('./web-api');
-const { models, alphabet } = require('../constants');
+const { models, server_models, alphabet } = require('../constants');
 const nanoid = require('nanoid/generate');
 const _ = require('lodash');
 
@@ -65,10 +65,11 @@ class MongoSocketsService {
         }
       });
 
-      socket.on('token_refreshed_recreate', ({user_id, token}) => {
+      socket.on('token_refreshed_recreate', async ({user_id, token}) => {
+        console.log('TOKEN WAS EXPIRED, TRYING TO REFRESH!');
         this.user_sockets[user_id][socket.id].token = token;
 
-        const available_models = await API.getPermissionsFilters(this.user_sockets[user_id][socket.id].token, null, true);
+        const available_models = await API.getPermissionsFilter(this.user_sockets[user_id][socket.id].token, null, true);
       
         if (available_models) {
           this.handleSocketStreamsRecreation(user_id, socket.id, available_models);
@@ -175,13 +176,14 @@ class MongoSocketsService {
   // IN THIS CASE WE NEED SEPARATE STREAM RECREATION FOR MULTIPLE INDEPENDENT FLOWS
   // BASED ON AMOUNT OF CURRENT ONLINE DEVICES AND CHECK TOKENS ACCROSS ALL SOCKETS
   async recreateUserStreams(user_id) {
-    for(socket_id of Object.keys(this.user_sockets[user_id])) {
-      const available_models = await API.getPermissionsFilters(this.user_sockets[user_id][socket_id].token, null, true);
+    for(let socket_id of Object.keys(this.user_sockets[user_id])) {
+      const available_models = await API.getPermissionsFilter(this.user_sockets[user_id][socket_id].token, null, true);
       
-      if (available_models) {
+      if (available_models == 1) { // FOR TESTS !!!!!!!
         this.handleSocketStreamsRecreation(user_id, socket_id, available_models);
       } else {
         // Send event to client to refresh user Token
+        this.user_sockets[user_id][socket_id].socket_obj.emit('token_refresh_recreate');
       }
     }
   }
@@ -191,13 +193,13 @@ class MongoSocketsService {
 
     _.forEach(this.user_sockets[user_id][socket_id].streams, (stream_obj, stream_id) => {
       const model = stream_obj.model;
-      const permission_filter =  available_models[server_models[models[model]]].permissionFilter;
+      let permission_filter = available_models[server_models[models[model]]].permissionFilter;
       
       permission_filter = 
         (!Array.isArray(permission_filter) && 
         Object.keys(permission_filter).length > 0) ? permission_filter : null;
   
-      streamsToReacreate.push({
+      streamsToRecreate.push({
         stream_id,
         socket: this.user_sockets[user_id][socket_id].socket_obj,
         data: {
@@ -211,9 +213,9 @@ class MongoSocketsService {
       stream_obj.change_stream.close();
     });
 
-    _.forEach(streamsToReacreate, stream_data => {
+    _.forEach(streamsToRecreate, stream_data => {
       this.addMongoListener(stream_data.socket, stream_data.data, stream_data.stream_id);
-    })
+    });
   }
 };
 
