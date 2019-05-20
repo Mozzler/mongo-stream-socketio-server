@@ -179,7 +179,7 @@ class MongoSocketsService {
     for(let socket_id of Object.keys(this.user_sockets[user_id])) {
       const available_models = await API.getPermissionsFilter(this.user_sockets[user_id][socket_id].token, null, true);
       
-      if (available_models == 1) { // FOR TESTS !!!!!!!
+      if (available_models) {
         this.handleSocketStreamsRecreation(user_id, socket_id, available_models);
       } else {
         // Send event to client to refresh user Token
