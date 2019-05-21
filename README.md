@@ -2,7 +2,7 @@
 
 ## Prerequisites
 * Make sure that you have Node.js v10+ installed on your PC
-* Make sure that you have MongoDB v4+ installed on your PC
+* Make sure that you have MongoDB v4+ installed and configured as replica set on your PC
 
 ## Configuration
 You can configure ports, MongoDB instance URI, etc. by changing variables values in **/config/config.js** file
