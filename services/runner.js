@@ -9,7 +9,7 @@ const db = require('../services/db');
 
 const app = express();
 
-export class Runner {
+module.exports = class Runner {
 
     constructor(config) {
         this.config = config;
