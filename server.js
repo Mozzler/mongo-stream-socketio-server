@@ -1,4 +1,4 @@
-import {Runner} from "./services/runner";
+import Runner from "./services/runner";
 
 const config = require('./config/config');
 const userRoutes = require('./routes/user');
