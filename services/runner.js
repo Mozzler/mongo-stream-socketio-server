@@ -28,10 +28,6 @@ export class Runner {
         app.get('/', function(req, res) {
             res.send('This is not the server you are looking for.');
         });
-
-        app.listen(this.config.PORT, () => console.log(`App running at ${this.config.PORT}`));
-
-        let mongoSocketsService = new MongoSocketsService(this.io);
     }
 
     async setupReplicaSet() {
@@ -47,7 +43,11 @@ export class Runner {
         console.log(new Date(), 'Replica set started...');
     }
 
-    static get express() {
+    listen() {
+        app.listen(this.config.PORT, () => console.log(`App running at ${this.config.PORT}`));
+        let mongoSocketsService = new MongoSocketsService(this.io);
+    }
+    get express() {
         return app;
     }
 }
