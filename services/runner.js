@@ -9,7 +9,7 @@ const db = require('../services/db');
 
 const app = express();
 
-class Runner {
+export class Runner {
 
     constructor(config) {
         this.config = config;
@@ -51,5 +51,3 @@ class Runner {
         return app;
     }
 }
-
-module.exports = Runner;
