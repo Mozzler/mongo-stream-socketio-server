@@ -3,18 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "nodemon --exec babel-node server.js"
   },
   "dependencies": {
     "axios": "^0.18.0",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "mongodb": "^3.2.4",
+    "mongodb": "^3.2.5",
     "mongodb-topology-manager": "^2.1.0",
     "nanoid": "^2.0.1",
     "socket.io": "^2.2.0",
     "socket.io-adapter-mongo": "^2.0.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/node": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
+    "nodemon": "^1.19.1"
+  }
 }
