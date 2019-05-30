@@ -9,11 +9,11 @@ const db = require('../services/db');
 
 const app = express();
 
-export class Runner {
+module.exports = class Runner {
 
     constructor(config) {
         this.config = config;
-        this.io = new io(config.PORT);
+        this.io = new io(config.SOCKETS_PORT);
     }
 
     async init() {
