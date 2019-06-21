@@ -1,35 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const mongoAdapter = require('socket.io-adapter-mongo');
-const bodyParser = require('body-parser');
-const db = require('./services/db');
 const config = require('./config/config');
+
 const carRoutes = require('./routes/car');
 const userRoutes = require('./routes/user');
 const dealershipRoutes = require('./routes/dealership');
-const MongoSocketsService = require('./services/sockets');
 
-const app = express();
-const io = require('socket.io')(config.SOCKETS_PORT);
+const runner = require('./runner.js')(config);
+runner.init().catch(error => console.error(error));
 
-runServer().catch(error => console.error(error));
+runner.setRoute('/v1/cars', carRoutes);
+runner.setRoute('/v1/users', userRoutes);
+runner.setRoute('/v1/dealerships', dealershipRoutes);
 
-async function runServer() {
-  await db.connect(config.MONGO_URI, config.DB_NAME);
- 
-  io.adapter(mongoAdapter(config.MONGO_URI));
-
-  app.use(cors());
-  app.use(bodyParser.json({limit: '50mb'}));
-  app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
-  app.get('/', function(req, res) {
-    res.send('This is not the server you are looking for.');
-  });
-
-  app.use('/v1/cars', carRoutes);
-  app.use('/v1/users', userRoutes);
-  app.use('/v1/dealerships', dealershipRoutes);
-  app.listen(config.PORT, () => console.log(`App running at ${config.PORT}`));
-
-  const mongoSocketsService = new MongoSocketsService(io);
-};
+runner.listen();

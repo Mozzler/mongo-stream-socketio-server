@@ -1,7 +1,7 @@
 const MongoClient = require('mongodb').MongoClient;
 const state = {
   db: null,
-}
+};
 
 module.exports = {
   connect: async (uri, dbName) => {
