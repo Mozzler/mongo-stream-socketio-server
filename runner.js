@@ -2,18 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const mongoAdapter = require('socket.io-adapter-mongo');
 const bodyParser = require('body-parser');
-const io = require('socket.io');
-
 const MongoSocketsService = require('./services/sockets');
 const DB = require('./services/db');
 
+const Server = require('socket.io');
 
 class Runner {
     constructor(config) {
         this.app = express();
         this.config = config;
 
-        this.io = new io(config.SOCKETS_PORT);
+        this.io = new Server(config.SOCKETS_PORT);
     }
 
     async init() {
@@ -31,7 +30,7 @@ class Runner {
 
     listen() {
         this.app.listen(this.config.PORT, () => console.log(`App running at ${this.config.PORT}`));
-        return new MongoSocketsService(this.io);
+        new MongoSocketsService(this.io);
     }
 
     setRoute(route, entity) {
