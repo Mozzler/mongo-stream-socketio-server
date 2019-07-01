@@ -12,7 +12,7 @@ function configure (runner) {
 
     const io = runner.initIO();
     io.initListeners();
-    
+
     runner.listen();
 }
 
