@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const DB = require('./services/db');
 
 const Server = require('socket.io');
+const MongoSocketsService = require('./services/sockets');
 
 class Runner {
     constructor(config) {
@@ -34,7 +35,7 @@ class Runner {
     initIO () {
         this.io = new Server(this.config.SOCKETS_PORT);
         this.io.adapter(mongoAdapter(this.config.MONGO_URI));
-        return this.io;
+        return new MongoSocketsService(this.io);
     }
 }
 

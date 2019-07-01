@@ -1,6 +1,6 @@
 const db = require('./db');
-const ObjectID = require('mongodb').ObjectID;
 const API = require('./web-api');
+const ObjectID = require('mongodb').ObjectID;
 const { models, server_models, alphabet } = require('../constants');
 const nanoid = require('nanoid/generate');
 const _ = require('lodash');
@@ -9,13 +9,15 @@ class MongoSocketsService {
   constructor(io) {
     this.io = io;
     this.user_sockets = {};
+  }
 
+  initListeners () {
     this.io.on('connection', (socket) => {
       console.log(`NEW SOCKET ${socket.id}`);
 
       socket.on('join_collection', async (data, cb) => {
         const user = await API.checkToken(data.token);
-        
+
         if (user) {
           const permissionFilter = await API.getPermissionsFilter(data.token, data.model);
 
@@ -44,12 +46,12 @@ class MongoSocketsService {
         const user_id = _.findKey(this.user_sockets, obj => {
           return Object.keys(obj).includes(socket.id);
         });
-        
+
         if (this.user_sockets[user_id] && this.user_sockets[user_id][socket.id]) {
           Object.keys(this.user_sockets[user_id][socket.id].streams).forEach(stream_id => {
             this.user_sockets[user_id][socket.id].streams[stream_id].change_stream.close();
           });
-  
+
           delete this.user_sockets[user_id][socket.id];
         }
       });
@@ -70,7 +72,7 @@ class MongoSocketsService {
         this.user_sockets[user_id][socket.id].token = token;
 
         const available_models = await API.getPermissionsFilter(this.user_sockets[user_id][socket.id].token, null, true);
-      
+
         if (available_models) {
           this.handleSocketStreamsRecreation(user_id, socket.id, available_models);
         }

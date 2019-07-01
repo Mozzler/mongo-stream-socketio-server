@@ -19,7 +19,7 @@ let urls = {
 };
 
 module.exports = {
-  setDefaults (server = WEB_API_URL, routes = urls) {
+  setDefaults (server, routes) {
     axios.defaults.baseURL = server;
     urls = routes;
   },
