@@ -1,5 +1,5 @@
 const { WEB_API_URL } = require('../config/config');
-const { models, server_models } = require('../constants');
+let { models, server_models } = require('../constants');
 const axios = require('axios');
 
 axios.defaults.baseURL = WEB_API_URL;
@@ -19,9 +19,11 @@ let urls = {
 };
 
 module.exports = {
-  setDefaults (server, routes) {
+  setDefaults (server, routes, constants) {
     axios.defaults.baseURL = server;
     urls = routes;
+
+    [ models, server_models ] = constants;
   },
   checkToken: async (token) => {
     try {
