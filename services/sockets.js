@@ -121,17 +121,15 @@ class MongoSocketsService {
     };
 
     this.user_sockets[data.user_id][socket.id].streams[streamId].change_stream = mongoCollection.watch(
-      filter,
-      {fullDocument: 'updateLookup'}
-    ).on('change', data => {
-      const {
-        operationType,
-        updateDescription,
-        fullDocument,
-        documentKey
-      } = data;
+      filter, { fullDocument: 'updateLookup' }
+    ).on('change', item => {
+      const response = {
+        operationType: item.operationType,
+        fullDocument: item.fullDocument,
+        model: data.model
+      };
 
-      socket.emit('mongo_data', {operationType, fullDocument, updateDescription, documentKey});
+      socket.emit('mongo_data', response);
     });
   }
 
