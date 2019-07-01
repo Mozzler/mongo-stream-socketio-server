@@ -1,14 +1,15 @@
 const db = require('./db');
-const API = require('./web-api');
 const ObjectID = require('mongodb').ObjectID;
-const { models, server_models, alphabet } = require('../constants');
-const nanoid = require('nanoid/generate');
+const uuid = require('uuid/v4');
 const _ = require('lodash');
 
 class MongoSocketsService {
-  constructor(io) {
+  constructor(io, API) {
     this.io = io;
     this.user_sockets = {};
+
+    this.API = API;
+    this.initListeners();
   }
 
   initListeners () {
@@ -16,28 +17,28 @@ class MongoSocketsService {
       console.log(`NEW SOCKET ${socket.id}`);
 
       socket.on('join_collection', async (data, cb) => {
-        const user = await API.checkToken(data.token);
+        const user = await this.API.checkToken(data.token);
 
-        if (user) {
-          const permissionFilter = await API.getPermissionsFilter(data.token, data.model);
-
-          if (permissionFilter) {
-            data.permission_filter = permissionFilter;
-          }
-
-          const streamId = `${socket.id}-${nanoid(alphabet, 6)}`;
-          this.handleConnection(socket, data, streamId);
-
-          cb({
-            streamId,
-            error: false
-          });
-        } else {
+        if (!user) {
           cb({
             streamId: null,
             error: true
           });
         }
+
+        const permissionFilter = await this.API.getPermissionsFilter(data.token, data.model);
+
+        if (permissionFilter) {
+          data.permission_filter = permissionFilter;
+        }
+
+        const streamId = uuid();
+        this.handleConnection(socket, data, streamId);
+
+        cb({
+          streamId,
+          error: false
+        });
       });
 
       socket.on('disconnect', () => {
@@ -62,6 +63,7 @@ class MongoSocketsService {
         if (this.user_sockets[user_id] &&
             this.user_sockets[user_id][socket.id] &&
             this.user_sockets[user_id][socket.id].streams[stream_id]) {
+
           this.user_sockets[user_id][socket.id].streams[stream_id].change_stream.close();
           delete this.user_sockets[user_id][socket.id].streams[stream_id];
         }
@@ -70,8 +72,7 @@ class MongoSocketsService {
       socket.on('token_refreshed_recreate', async ({user_id, token}) => {
         console.log('TOKEN WAS EXPIRED, TRYING TO REFRESH!');
         this.user_sockets[user_id][socket.id].token = token;
-
-        const available_models = await API.getPermissionsFilter(this.user_sockets[user_id][socket.id].token, null, true);
+        const available_models = await this.API.getPermissionsFilter(token, null, true);
 
         if (available_models) {
           this.handleSocketStreamsRecreation(user_id, socket.id, available_models);
@@ -83,20 +84,18 @@ class MongoSocketsService {
   }
 
   handleConnection(socket, data, streamId) {
+    const socketObj = {
+      token: data.token,
+      socket_obj: socket,
+      streams: {}
+    };
+
     if (!this.user_sockets[data.user_id]) {
       this.user_sockets[data.user_id] = {
-        [socket.id]: {
-          token: data.token,
-          socket_obj: socket,
-          streams: {}
-        }
+        [socket.id]: socketObj
       }
     } else if (!this.user_sockets[data.user_id][socket.id]) {
-      this.user_sockets[data.user_id][socket.id] = {
-        token: data.token,
-        socket_obj: socket,
-        streams: {}
-      }
+      this.user_sockets[data.user_id][socket.id] = socketObj;
     } else {
       this.user_sockets[data.user_id][socket.id].token = data.token;
     }
@@ -105,7 +104,7 @@ class MongoSocketsService {
   }
 
   addMongoListener(socket, data, streamId) {
-    const collection = models[data.model];
+    const collection = this.API.getModelByKey(data.model);
     const mongoCollection = db.get().collection(collection);
     const filter = data.filter;
 
@@ -162,7 +161,7 @@ class MongoSocketsService {
       }
     }];
 
-    db.get().collection(models.User).watch(
+    db.get().collection(this.API.getModelByKey('user')).watch(
       filter,
     ).on('change', data => {
       console.log('USER ROLE WAS CHANGED !');
@@ -179,7 +178,7 @@ class MongoSocketsService {
   // BASED ON AMOUNT OF CURRENT ONLINE DEVICES AND CHECK TOKENS ACCROSS ALL SOCKETS
   async recreateUserStreams(user_id) {
     for(let socket_id of Object.keys(this.user_sockets[user_id])) {
-      const available_models = await API.getPermissionsFilter(this.user_sockets[user_id][socket_id].token, null, true);
+      const available_models = await this.API.getPermissionsFilter(this.user_sockets[user_id][socket_id].token, null, true);
       
       if (available_models) {
         this.handleSocketStreamsRecreation(user_id, socket_id, available_models);
@@ -195,12 +194,9 @@ class MongoSocketsService {
 
     _.forEach(this.user_sockets[user_id][socket_id].streams, (stream_obj, stream_id) => {
       const model = stream_obj.model;
-      let permission_filter = available_models[server_models[models[model]]].permissionFilter;
-      
-      permission_filter = 
-        (!Array.isArray(permission_filter) && 
-        Object.keys(permission_filter).length > 0) ? permission_filter : null;
-  
+
+      let permission_filter = this.API.getFilter(available_models, model);
+
       streamsToRecreate.push({
         stream_id,
         socket: this.user_sockets[user_id][socket_id].socket_obj,
@@ -218,10 +214,6 @@ class MongoSocketsService {
     _.forEach(streamsToRecreate, stream_data => {
       this.addMongoListener(stream_data.socket, stream_data.data, stream_data.stream_id);
     });
-  }
-
-  getAPI () {
-    return API;
   }
 }
 

@@ -5,7 +5,9 @@ const bodyParser = require('body-parser');
 const DB = require('./services/db');
 
 const Server = require('socket.io');
+
 const MongoSocketsService = require('./services/sockets');
+const PermissionService = require('./services/permission-api');
 
 class Runner {
     constructor(config) {
@@ -32,10 +34,12 @@ class Runner {
         this.app.use(route, entity);
     }
 
-    initIO () {
+    initIO (models) {
         this.io = new Server(this.config.SOCKETS_PORT);
         this.io.adapter(mongoAdapter(this.config.MONGO_URI));
-        return new MongoSocketsService(this.io);
+
+        const permissionService = new PermissionService(this.config.WEB_API_URL, models);
+        return new MongoSocketsService(this.io, permissionService);
     }
 }
 

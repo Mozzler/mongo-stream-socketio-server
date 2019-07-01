@@ -1,4 +1,5 @@
 const config = require('./config/config');
+const constants = require('./config/constants');
 const runner = require('./runner.js')(config);
 
 const carRoutes = require('./routes/car');
@@ -10,9 +11,7 @@ function configure (runner) {
     runner.setRoute('/v1/users', userRoutes);
     runner.setRoute('/v1/dealerships', dealershipRoutes);
 
-    const io = runner.initIO();
-    io.initListeners();
-
+    runner.initIO(constants);
     runner.listen();
 }
 
