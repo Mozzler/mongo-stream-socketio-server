@@ -10,7 +10,7 @@ module.exports = {
     'drivible.dealership': 'app\\models\\Dealership' 
   },
   routes: {
-    user: 'user',
+    user: 'users',
     stream: 'metadata/stream'
   }
 };
