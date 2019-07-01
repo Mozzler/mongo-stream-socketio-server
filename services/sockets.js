@@ -217,6 +217,10 @@ class MongoSocketsService {
       this.addMongoListener(stream_data.socket, stream_data.data, stream_data.stream_id);
     });
   }
-};
+
+  getAPI () {
+    return API;
+  }
+}
 
 module.exports = MongoSocketsService;

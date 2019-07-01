@@ -11,12 +11,21 @@ function getOptions(token) {
       'Content-Type': 'application/json'
     }
   };
+}
+
+let urls = {
+  users: 'users',
+  streams: 'metadata/streams'
 };
 
 module.exports = {
+  setDefaults (server = WEB_API_URL, routes = urls) {
+    axios.defaults.baseURL = server;
+    urls = routes;
+  },
   checkToken: async (token) => {
     try {
-      const response = await axios.get('users', getOptions(token));
+      const response = await axios.get(urls.users, getOptions(token));
       return response.data.items[0];
     } catch(err) {
       return null;
@@ -24,7 +33,7 @@ module.exports = {
   },
   getPermissionsFilter: async (token, model, is_raw) => {
     try {
-      const { data: {models: available_models} } = await axios.get('metadata/streams', getOptions(token));
+      const { data: {models: available_models} } = await axios.get(urls.streams, getOptions(token));
       
       if (is_raw) {
         return available_models;
