@@ -21,7 +21,7 @@ class PermissionService {
       const response = await axios.get(this.system.routes.stream, this.getOptions(token));
       const { data: {models: available_models} } = response;
 
-      return is_raw ? available_models : this.getFilter(available_models, phpModel);
+      return is_raw ? available_models : this.getFilter(available_models, model);
     } catch(err) {
       return null;
     }

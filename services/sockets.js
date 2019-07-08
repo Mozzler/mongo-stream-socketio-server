@@ -18,27 +18,24 @@ class MongoSocketsService {
 
       socket.on('join_collection', async (data, cb) => {
         const user = await this.API.checkToken(data.token);
+        const response = {
+          streamId: null,
+          snapshot: null,
+          error: false
+        };
 
         if (!user) {
-          cb({
-            streamId: null,
-            error: true
-          });
+          response.error = true;
+          cb(response);
         }
 
-        const permissionFilter = await this.API.getPermissionsFilter(data.token, data.model);
+        response.streamId = uuid();
+        response.snapshot = await this.getSnapshot(data.model, data.filter);
 
-        if (permissionFilter) {
-          data.permission_filter = permissionFilter;
-        }
+        cb(response);
 
-        const streamId = uuid();
-        this.handleConnection(socket, data, streamId);
-
-        cb({
-          streamId,
-          error: false
-        });
+        data.permission_filter = await this.API.getPermissionsFilter(data.token, data.model);
+        this.handleConnection(socket, data, response.streamId);
       });
 
       socket.on('disconnect', () => {
@@ -83,6 +80,13 @@ class MongoSocketsService {
     this.subscribeToUserRoles();
   }
 
+  async getSnapshot (model, filter) {
+    const collection = this.API.getModelByKey(model);
+    const mongoCollection = db.get().collection(collection);
+
+    return await mongoCollection.find(filter).toArray();
+  }
+
   handleConnection(socket, data, streamId) {
     const socketObj = {
       token: data.token,
@@ -106,10 +110,16 @@ class MongoSocketsService {
   addMongoListener(socket, data, streamId) {
     const collection = this.API.getModelByKey(data.model);
     const mongoCollection = db.get().collection(collection);
-    const filter = data.filter;
+    let filter = [{
+      $match: {
+        $and: []
+      }
+    }];
 
     if (data.permission_filter) {
       filter[0].$match.$and.push(data.permission_filter);
+    } else {
+      filter = [];
     }
 
     this.castFilter(filter);
