@@ -29,13 +29,14 @@ class MongoSocketsService {
           cb(response);
         }
 
+        data.userId = user.id;
         response.streamId = uuid();
-        response.snapshot = await this.getSnapshot(data.model, data.filter);
-
-        cb(response);
+        response.snapshot = await this.getSnapshot(data);
 
         data.permission_filter = await this.API.getPermissionsFilter(data.token, data.model);
         this.handleConnection(socket, data, response.streamId);
+
+        cb(response);
       });
 
       socket.on('disconnect', () => {
@@ -80,11 +81,53 @@ class MongoSocketsService {
     this.subscribeToUserRoles();
   }
 
-  async getSnapshot (model, filter) {
-    const collection = this.API.getModelByKey(model);
-    const mongoCollection = db.get().collection(collection);
+  async getSnapshot (data) {
+    const collection = this.API.getModelByKey(data.model);
+    let mongoCollection = db.get().collection(collection);
 
-    return await mongoCollection.find(filter).toArray();
+    let filters = {};
+
+    if (data.model === 'team') {
+      mongoCollection = db.get().collection('userTeam');
+      filters = [
+        { $match: { 'userId': ObjectID(data.userId) } },
+        {
+          $lookup: {
+            from: 'team',
+            localField: 'teamId',
+            foreignField: '_id',
+            as: 'team'
+          }
+        },
+        {
+          $project: {
+            team: {
+              $arrayElemAt: [ '$team', 0 ]
+            }
+          }
+        }
+      ];
+    }
+    if (data.model === 'user') {
+      filters = [{
+        $match: {
+          $or: [
+            { '_id': ObjectID(data.userId) }
+          ]
+        }
+      }];
+    }
+    if (data.model === 'story') {
+      filters = [{
+        $match: {
+          $or: [
+            { 'projectId': ObjectID(data.userId) }
+          ]
+        }
+      }];
+    }
+
+    return await mongoCollection.aggregate(filters).toArray();
   }
 
   handleConnection(socket, data, streamId) {
@@ -103,7 +146,7 @@ class MongoSocketsService {
     } else {
       this.user_sockets[data.user_id][socket.id].token = data.token;
     }
-    
+
     this.addMongoListener(socket, data, streamId);
   }
 
@@ -127,12 +170,13 @@ class MongoSocketsService {
 
     this.user_sockets[data.user_id][socket.id].streams[streamId] = {
       model: data.model,
-      filter: data.filter 
+      filter: data.filter
     };
 
     this.user_sockets[data.user_id][socket.id].streams[streamId].change_stream = mongoCollection.watch(
-      filter, { fullDocument: 'updateLookup' }
+        filter, { fullDocument: 'updateLookup' }
     ).on('change', item => {
+      console.log('changed');
       const response = {
         operationType: item.operationType,
         fullDocument: item.fullDocument,
@@ -149,7 +193,7 @@ class MongoSocketsService {
         if (typeof obj[key] != 'number' && ObjectID.isValid(obj[key])) {
           obj[key] = ObjectID(obj[key]);
         }
-  
+
         if (typeof obj[key] === 'object' && !(obj[key] instanceof ObjectID)) {
           iterate(obj[key])
         }
@@ -170,7 +214,7 @@ class MongoSocketsService {
     }];
 
     db.get().collection(this.API.getModelByKey('user')).watch(
-      filter,
+        filter,
     ).on('change', data => {
       console.log('USER ROLE WAS CHANGED !');
       const user_id = data.documentKey._id.toString();
@@ -187,7 +231,7 @@ class MongoSocketsService {
   async recreateUserStreams(user_id) {
     for(let socket_id of Object.keys(this.user_sockets[user_id])) {
       const available_models = await this.API.getPermissionsFilter(this.user_sockets[user_id][socket_id].token, null, true);
-      
+
       if (available_models) {
         this.handleSocketStreamsRecreation(user_id, socket_id, available_models);
       } else {
