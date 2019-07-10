@@ -34,12 +34,11 @@ class Runner {
         this.app.use(route, entity);
     }
 
-    initIO (models) {
+    initIO () {
         this.io = new Server(this.config.SOCKETS_PORT);
         this.io.adapter(mongoAdapter(this.config.MONGO_URI));
 
-        const permissionService = new PermissionService(this.config.WEB_API_URL, models);
-        return new MongoSocketsService(this.io, permissionService);
+        return this.io;
     }
 }
 
