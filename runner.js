@@ -6,9 +6,6 @@ const DB = require('./services/db');
 
 const Server = require('socket.io');
 
-const MongoSocketsService = require('./services/sockets');
-const PermissionService = require('./services/permission-api');
-
 class Runner {
     constructor(config) {
         this.app = express();

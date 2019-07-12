@@ -7,21 +7,17 @@ class PermissionService {
     this.system = constants;
   }
 
-  async checkToken (token) {
-    try {
-      const response = await axios.get(this.system.routes.user, this.getOptions(token));
-      return response.data.items[0];
-    } catch(err) {
-      return null;
-    }
-  }
-
   async getPermissionsFilter (token, model, is_raw) {
     try {
       const response = await axios.get(this.system.routes.stream, this.getOptions(token));
       const { data: {models: available_models} } = response;
 
-      return is_raw ? available_models : this.getFilter(available_models, model);
+      const filters = is_raw ? available_models : this.getFilter(available_models, model);
+
+      const user = this.getFilter(available_models, 'user');
+      const userId = this.getUserId(user);
+
+      return [filters, userId];
     } catch(err) {
       return null;
     }
@@ -29,11 +25,15 @@ class PermissionService {
 
   getFilter (models, model) {
     const phpModel = this.system.server_models[this.system.models[model]];
-    let filter = models[phpModel].permissionFilter;
+    const filter = models[phpModel].permissionFilter;
 
     return (!Array.isArray(filter) &&
         Object.keys(filter).length > 0) ?
         filter : null;
+  }
+
+  getUserId (user) {
+    return user.$or[0]['documentKey._id'];
   }
 
   getOptions (token) {

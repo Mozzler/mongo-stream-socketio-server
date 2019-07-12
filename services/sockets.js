@@ -31,7 +31,6 @@ class MongoSocketsService {
 
         data.userId = user.id;
         response.streamId = uuid();
-        response.snapshot = await this.getSnapshot(data);
 
         data.permission_filter = await this.API.getPermissionsFilter(data.token, data.model);
         this.handleConnection(socket, data, response.streamId);
@@ -79,55 +78,6 @@ class MongoSocketsService {
     });
 
     this.subscribeToUserRoles();
-  }
-
-  async getSnapshot (data) {
-    const collection = this.API.getModelByKey(data.model);
-    let mongoCollection = db.get().collection(collection);
-
-    let filters = {};
-
-    if (data.model === 'team') {
-      mongoCollection = db.get().collection('userTeam');
-      filters = [
-        { $match: { 'userId': ObjectID(data.userId) } },
-        {
-          $lookup: {
-            from: 'team',
-            localField: 'teamId',
-            foreignField: '_id',
-            as: 'team'
-          }
-        },
-        {
-          $project: {
-            team: {
-              $arrayElemAt: [ '$team', 0 ]
-            }
-          }
-        }
-      ];
-    }
-    if (data.model === 'user') {
-      filters = [{
-        $match: {
-          $or: [
-            { '_id': ObjectID(data.userId) }
-          ]
-        }
-      }];
-    }
-    if (data.model === 'story') {
-      filters = [{
-        $match: {
-          $or: [
-            { 'projectId': ObjectID(data.userId) }
-          ]
-        }
-      }];
-    }
-
-    return await mongoCollection.aggregate(filters).toArray();
   }
 
   handleConnection(socket, data, streamId) {
