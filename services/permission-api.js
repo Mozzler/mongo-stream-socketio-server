@@ -13,13 +13,12 @@ class PermissionService {
       const { data: {models: available_models} } = response;
 
       const filters = is_raw ? available_models : this.getFilter(available_models, model);
-
-      const user = this.getFilter(available_models, 'user');
+      const user = this.getFilter(available_models, 'owner');
       const userId = this.getUserId(user);
 
       return [filters, userId];
     } catch(err) {
-      return null;
+      return [err];
     }
   }
 
